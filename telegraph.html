@@ -1,0 +1,87 @@
+<html>
+<head><title>Cape Cod Trace Route Project</title></head>
+<body>
+  <div id="mapdiv"></div>
+  <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+  <script>
+
+// http://dev.openlayers.org/examples/draw-feature.html
+
+  // http://dev.openlayers.org/examples/
+
+  var lon = 41.618116;
+  var lat = -70.485361;
+
+  // GOOGLE TRACE ROUTE EXAMPLE
+  //var locations = [[lat,lon], [-77.3861, 38.9695], [-122.0574, 37.4192], [-122.0574, 37.4192], [-122.0574, 37.4192]];
+  // FACEBOOK TRACE ROUTE EXAMPLE:
+  //var locations = [[lat,lon], [-77.3861, 38.9695], [-122.1781, 37.459], [-122.1781, 37.459], [-122.1781, 37.459], [-122.1781, 37.459], [-122.1826, 37.3762], [-122.1781, 37.459], [-122.1826, 37.3762], [-122.1826, 37.3762], [-122.1826, 37.3762]];
+  // Marine Biological Labratory Cape Cod, MA
+  //var locations = [[lat,lon], [-77.3861, 38.9695], [-75.4083, 40.0548], [-75.4083, 40.0548], [-75.4083, 40.0548]];
+  // Ubuntu UK
+  var locations = [[lat,lon], [-77.3861, 38.9695], [-0.13, 51.5], [-0.13, 51.5], [-0.13, 51.5], [-0.0931, 51.5142]]
+  map = new OpenLayers.Map("mapdiv");
+  map.addLayer(new OpenLayers.Layer.OSM());
+
+  var fromProjection = new OpenLayers.Projection("EPSG:4326");   // Transform from WGS 1984
+  var toProjection   = new OpenLayers.Projection("EPSG:900913"); // to Spherical Mercator Projection
+  var center         = new OpenLayers.LonLat(lon, lat).transform(fromProjection, toProjection);
+
+  // http://wiki.openstreetmap.org/wiki/Zoom_levels
+  var zoom=1;
+  map.setCenter (center, zoom);
+
+  // Add the Markers Layer
+  var markers = new OpenLayers.Layer.Vector("Markers Overlay");
+  for (var l = 0; l < locations.length; l++){
+    var feature = new OpenLayers.Feature.Vector(
+      new OpenLayers.Geometry.Point( locations[l][0], locations[l][1] ).transform(fromProjection, toProjection),
+      {description:"Longitude: " + locations[l][0] + " Latitude: " + locations[l][1]} ,
+      {externalGraphic: 'marker.png', graphicHeight: 25, graphicWidth: 21, graphicXOffset:-12, graphicYOffset:-25  }
+    );
+    markers.addFeatures(feature);
+  }
+  map.addLayer(markers);
+
+  //http://dev.openlayers.org/docs/files/OpenLayers/Geometry/LineString-js.html#OpenLayers.Geometry.LineString
+  // All lines to the Map
+  var lines = new OpenLayers.Layer.Vector("Lines Overlay");
+  var coordinates = [];
+  for (var i = 0; i < locations.length; i++) {
+    coordinates.push(new OpenLayers.Geometry.Point(locations[i][0], locations[i][1]).transform(fromProjection, toProjection));
+  }
+  var feature = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.LineString(coordinates));
+  lines.addFeatures(feature);
+  map.addLayer(lines);
+
+  //Add a selector control to the vectorLayer with popup functions
+  var controls = {
+    selector: new OpenLayers.Control.SelectFeature(markers, { onSelect: createPopup, onUnselect: destroyPopup })
+  };
+
+  function createPopup(feature) {
+    feature.popup = new OpenLayers.Popup.FramedCloud("pop",
+    feature.geometry.getBounds().getCenterLonLat(),
+    null,
+    '<div class="markerContent">'+feature.attributes.description+'</div>',
+    null,
+    true,
+    function() { controls['selector'].unselectAll(); }
+  );
+  //feature.popup.closeOnMove = true;
+  map.addPopup(feature.popup);
+}
+
+function destroyPopup(feature) {
+  feature.popup.destroy();
+  feature.popup = null;
+}
+
+map.addControl(controls['selector']);
+//map.addControl(new OpenLayers.Control.MousePosition());
+controls['selector'].activate();
+
+</script>
+
+</body>
+</html>
