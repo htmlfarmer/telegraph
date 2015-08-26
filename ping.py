@@ -24,6 +24,24 @@ ping = subprocess.Popen(
     stderr = subprocess.PIPE
 )
 
+ping1 = {"ip" : ip,
+        "host" : host, # ping -a
+        "min" : min,  
+        "avg" : avg,
+        "max" : max,
+        "dev" : dev
+        "address" : address,
+        "lat" : lat,
+        "lng" : lng
+        }
+trace = {"ip" : ip,
+        "host": host, # from traceroute
+        "min" : min,
+        "avg" : avg,
+        "max" : max,
+        "dev" : dev
+        }
+
 print "Ping Millisecond Study of (" + host + ")" +  ") Tests: " + str(pnum)
 print "(fastest, average, max, deviation)"
 pingtext, error = ping.communicate()
