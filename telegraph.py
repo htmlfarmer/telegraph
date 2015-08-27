@@ -32,7 +32,19 @@ traceroute = subprocess.Popen(
     stderr = subprocess.PIPE
 )
 
-tracetext, error = traceroute.communicate()
+# tracetext, error = traceroute.communicate()
+# read the traceroute process line by line
+tracetext = ""
+while True:
+  # TODO if you we see "* * *" quit the loop regex
+  line = traceroute.stdout.readline()
+  tracetext += line;
+  # if we see 3 or more *'s in a row break
+  if line != '' and (re.search('(\* ){3,}', line) is None):
+    #the real code does filtering here
+    print line.rstrip() # remove return at end of line
+  else:
+    break
 
 matcher = re.compile("(?<=\()\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?=\) )")
 ips = matcher.findall(tracetext)
