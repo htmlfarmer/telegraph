@@ -14,7 +14,10 @@ import re
 if(len(sys.argv) > 1):
     host = sys.argv[1]
 else:
-    host= "centos.com" # should be located in Germany about 100 ms from USA
+    host= "boston.com" # should be located in Germany about 100 ms from USA
+
+
+'''
 
 # ping: to see the total time along the route
 pnum = 5 # number of pings to test
@@ -53,6 +56,8 @@ print trace # verify all the timings are correct for the trace
 
 # traceroute: to collect timing info along this route
 
+'''
+
 tnum = 5
 traceroute = subprocess.Popen(
     ["traceroute", "-q", str(tnum), host],
@@ -67,8 +72,7 @@ while True:
   line = traceroute.stdout.readline()
   tracetext += line;
   # if we see 3 or more *'s in a row break
-  regex = re.compile("(\* ){3,}")
-  if line != '' and (re.match(regex, line) is None):
+  if line != '' and (re.search('(\* ){3,}', line) is None):
     #the real code does filtering here
     print line.rstrip() # remove return at end of line
   else:
@@ -91,7 +95,7 @@ print hosts
 
 # Todd: We would like to do something like this...
 route = []
-for index, ip in ips:
+for index, ip in enumerate(ips):
 
     ping = {"ip" : ip,
         "host" : hosts[index]
@@ -104,6 +108,6 @@ for index, ip in ips:
         #"lng" : lng
         }
 
-    route.push(ping)
+    route.append(ping)
 
 print route
