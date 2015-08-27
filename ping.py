@@ -24,24 +24,6 @@ ping = subprocess.Popen(
     stderr = subprocess.PIPE
 )
 
-ping1 = {"ip" : ip,
-        "host" : host, # ping -a
-        "min" : min,  
-        "avg" : avg,
-        "max" : max,
-        "dev" : dev
-        "address" : address,
-        "lat" : lat,
-        "lng" : lng
-        }
-trace = {"ip" : ip,
-        "host": host, # from traceroute
-        "min" : min,
-        "avg" : avg,
-        "max" : max,
-        "dev" : dev
-        }
-
 print "Ping Millisecond Study of (" + host + ")" +  ") Tests: " + str(pnum)
 print "(fastest, average, max, deviation)"
 pingtext, error = ping.communicate()
@@ -71,10 +53,11 @@ print ips #print tracetext
 matcher = re.compile("\d{1,3}\.\d{1,3}(?= ms)")
 timeslist = matcher.findall(tracetext)
 times = []
+"""
 for time in timeslist:
     for test = 0; test < tnum; test++
 print times
-
+"""
 # get all the text domain names for the route
 matcher = re.compile("(?<=  )[a-zA-Z0-9\-\.]+\.[a-zA-Z0-9]{1,5}(?= \()")
 urls = matcher.findall(tracetext)

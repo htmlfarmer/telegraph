@@ -38,6 +38,7 @@ matcher = re.compile("(?<=\()\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?=\) )")
 ips = matcher.findall(tracetext)
 print ips #print tracetext
 
+
 def GET_REQUEST(address):
 
     timeout = 60
