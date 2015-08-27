@@ -42,7 +42,7 @@ matcher = re.compile("(\d+.\d+)/(\d+.\d+)/(\d+.\d+)/(\d+.\d+)")
 speeds = matcher.search(pingtext).groups()
 
 # the ping times are for the FULL traceroute
-trace = {"ip" : host, # TODO ask Todd maybe has ideas?
+route = {"ip" : host, # TODO ask Todd maybe has ideas?
         "host": host,
         "min" : speeds[0],
         "avg" : speeds[1],
@@ -50,7 +50,7 @@ trace = {"ip" : host, # TODO ask Todd maybe has ideas?
         "dev" : speeds[3]
         }
 
-print trace # verify all the timings are correct for the trace
+print route # verify all the timings are correct for the trace
 
 # traceroute: to collect timing info along this route
 
@@ -90,7 +90,7 @@ hosts = matcher.findall(tracetext)
 print hosts
 
 # Todd: We would like to do something like this...
-route = []
+trace = []
 for index, ip in enumerate(ips):
 
     ping = {"ip" : ip,
@@ -104,6 +104,6 @@ for index, ip in enumerate(ips):
         #"lng" : lng
         }
 
-    route.append(ping)
+    trace.append(ping)
 
-print route
+print trace
