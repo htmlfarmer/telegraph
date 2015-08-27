@@ -17,8 +17,6 @@ else:
     host= "boston.com" # should be located in Germany about 100 ms from USA
 
 
-'''
-
 # ping: to see the total time along the route
 pnum = 5 # number of pings to test
 pingtext = ""
@@ -55,8 +53,6 @@ trace = {"ip" : host, # TODO ask Todd maybe has ideas?
 print trace # verify all the timings are correct for the trace
 
 # traceroute: to collect timing info along this route
-
-'''
 
 tnum = 5
 traceroute = subprocess.Popen(
