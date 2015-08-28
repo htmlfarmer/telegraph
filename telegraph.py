@@ -19,19 +19,23 @@ About: This program searches Vacinity Information based on IP Address
         NOTE: Free 135 MB GeoIP Database http://dev.maxmind.com/geoip/geoip2/geolite2/
 """
 
+# CONFIGURATION SETTINGS
+pnum = 10 # number of pings to hostname/ip
+tnum = 5 # number of pings per traceroute
+
 if(len(sys.argv) > 1):
     host = sys.argv[1]
 else:
-    host= "boston.com" #"www.google.com" #"73.186.246.38" #128.128.76.17 #WHOI.edu
+    host = "mit.edu" #"boston.com" #"www.google.com" #"facebook.com" #"www.whoi.edu"
 
 # traceroute: to collect timing info along this route
 
 # TRACE ROUTE and PING analyzer
 
 # ping: to see the total time along the route
-pnum = 5 # number of pings to test
+
 pingtext = ""
-ping = subprocess.Popen(
+pingprocess = subprocess.Popen(
     ["ping", "-c", str(pnum), host],
     stdout = subprocess.PIPE,
     stderr = subprocess.PIPE
@@ -39,7 +43,7 @@ ping = subprocess.Popen(
 
 # read the process line by line
 while True:
-  line = ping.stdout.readline()
+  line = pingprocess.stdout.readline()
   pingtext += line;
   if line != '':
     #the real code does filtering here
@@ -49,19 +53,27 @@ while True:
 
 # matcher for speeds (min,avg,max,mdev)
 matcher = re.compile("(\d+.\d+)/(\d+.\d+)/(\d+.\d+)/(\d+.\d+)")
-# save the speeds for the ping test
-speeds = matcher.search(pingtext).groups()
-
-# the ping times are for the FULL traceroute
-route = {"ip" : host, # TODO ask Todd maybe has ideas?
+speeds = matcher.search(pingtext)
+ping = {}
+if(speeds):
+    speeds = speeds.groups()
+    # the ping times are for the FULL traceroute
+    ping = {"ip" : host, # TODO ask Todd maybe has ideas?
+            "host": host,
+            "min" : float(speeds[0]),
+            "avg" : float(speeds[1]),
+            "max" : float(speeds[2]),
+            "sdev" : float(speeds[3])
+            }
+    print ping # verify all the timings are correct for the trace
+else: # in CASE of ERROR with a PING
+    ping = {"ip" : host, # TODO ask Todd maybe has ideas?
         "host": host,
-        "min" : speeds[0],
-        "avg" : speeds[1],
-        "max" : speeds[2],
-        "sdev" : speeds[3]
+        "min" : "",
+        "avg" : "",
+        "max" : "",
+        "sdev" : ""
         }
-
-print route # verify all the timings are correct for the trace
 
 # traceroute: to collect timing info along this route
 
@@ -80,8 +92,8 @@ def append_trace(ip, host, times):
     average = sum(times)/len(times)
     variance = sdev(times, average)
 
-    ping = {"ip" : ip,
-        "host" : host,
+    trace = {"ip" : ip[0],
+        "host" : host[0],
         "times": times,
         "min" : minimum,
         "avg" : average,
@@ -92,8 +104,8 @@ def append_trace(ip, host, times):
         #"lng" : lng
         #"accesspoint" : router_number
         }
-    traceroute.append(ping)
-    print ping
+    traceroute.append(trace)
+    print trace
 
 def parse_trace(line):
     # get all the ip address for the route
@@ -113,9 +125,7 @@ def parse_trace(line):
             times[i] = float(times[i]) # convert time to a number
         append_trace(ip, host, times)
 
-# now run a trace route since all the functions are setup
-tnum = 5
-trace = subprocess.Popen(
+traceprocess = subprocess.Popen(
     ["traceroute", "-q", str(tnum), host],
     stdout = subprocess.PIPE,
     stderr = subprocess.PIPE
@@ -125,13 +135,13 @@ trace = subprocess.Popen(
 tracetext = ""
 while True:
   # TODO if you we see "* * *" quit the loop regex
-  line = trace.stdout.readline()
+  line = traceprocess.stdout.readline()
   tracetext += line;
   # if we see 3 or more *'s in a row break
   if line != '' and (re.search('(\* ){3,}', line) is None):
     #the real code does filtering here
     parse_trace(line)
-    print line.rstrip() # remove return at end of line
+    #print line.rstrip() # remove return at end of line
   else:
     break
 
@@ -159,7 +169,7 @@ traceroute.pop(0) #the first address is localhost and it needs to be removed
 blacklist = {"-6.2597" : "53.3478", "-97.0" : "38.0", "-97.2251" : "37.7083"}
 
 for index in range(len(traceroute)):
-    geohtml = GET_REQUEST("https://www.geoiptool.com/en/?ip=" + str(traceroute[index]["ip"]))
+    geohtml = GET_REQUEST("https://www.geoiptool.com/en/?ip=" + traceroute[index]["ip"])
     matcher = re.compile("{lat: .*}")
     geo = matcher.search(geohtml).group()
     geo = geo.replace("lat","\"lat\"")
@@ -170,7 +180,10 @@ for index in range(len(traceroute)):
     if str(lng) not in blacklist:
         traceroute[index]["lat"] = lat
         traceroute[index]["lng"] = lng
-        print traceroute[index]
+    else: # blacklist / bogus location
+        traceroute[index]["lat"] = ""
+        traceroute[index]["lng"] = ""
+    print traceroute[index]
 
 # Area Lookup for lat/lng of IP ADDRESS
 # http://nominatim.openstreetmap.org/search?q=us+41.618116,-70.485361&format=json&addressdetails=1
@@ -178,8 +191,11 @@ for index in range(len(traceroute)):
     openmap = GET_REQUEST("http://nominatim.openstreetmap.org/search?q=us+"+ str(traceroute[index]["lat"]) +","+ str(traceroute[index]["lng"]) + "&format=json&addressdetails=1")
     address = json.loads(openmap)
     traceroute[index]["address"] = address[0]["display_name"]
-    traceroute[index]["importance"] = address[0]["importance"]
-    print traceroute[index]["address"]
+    if traceroute[index]["address"] != "United States of America":
+        traceroute[index]["importance"] = address[0]["importance"]
+    else: # TODO: unknown town
+        traceroute[index]["importance"] = ""
+    print traceroute[index]
 
 print traceroute
 
