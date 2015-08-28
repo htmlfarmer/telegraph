@@ -80,6 +80,7 @@ def append_trace(ip, host, times):
         #"lng" : lng
         }
     trace.append(ping)
+    print ping
 
 def parse_trace(line):
     # get all the ip address for the route
@@ -97,9 +98,6 @@ def parse_trace(line):
     if len(ip) != 0 and len(host) != 0 and len(times) >= 1:
         for i in range(len(times)):
             times[i] = float(times[i]) # convert time to a number
-        print ip
-        print host
-        print times
         append_trace(ip, host, times)
 
 # now run a trace route since all the functions are setup
