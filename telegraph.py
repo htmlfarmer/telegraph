@@ -19,94 +19,94 @@ About: This program searches Vacinity Information based on IP Address
         NOTE: Free 135 MB GeoIP Database http://dev.maxmind.com/geoip/geoip2/geolite2/
 """
 
+# hostname to check if any (command line hostname priority)
+host = ""
+
 # CONFIGURATION SETTINGS
-pnum = 10 # number of pings to hostname/ip
+pnum = 5 # number of pings to hostname/ip
 tnum = 5 # number of pings per traceroute
 
+try_openstreetmap=False
+try_google=True
+
+# store all the traceroute  and ping info
+traceroute = []
+ping = {}
+
+# (command line hostname priority)
 if(len(sys.argv) > 1):
     host = sys.argv[1]
 else:
-    host = "mit.edu" #"boston.com" #"www.google.com" #"facebook.com" #"www.whoi.edu"
+    host = "www.whoi.edu" #"boston.com" #"www.google.com" #"facebook.com" #"mit.edu" #"harvard.edu" #"wit.edu"
 
-# traceroute: to collect timing info along this route
+def main ():
+    # ping = parse_ping(pyprocess("ping", "-c", str(pnum), host))
+    pyprocess("traceroute", "-q", str(tnum), host)
+    me = traceroute.pop(0) #the first address is localhost and it needs to be removed
+    geocode_traceroute(traceroute)
+    address_traceroute(traceroute)
+    print traceroute
 
-# TRACE ROUTE and PING analyzer
 
-# ping: to see the total time along the route
+def pyprocess(proc, flag, num, iphost):
+    ptext = ""
+    pprocess = subprocess.Popen(
+        [proc, flag, num, iphost],
+        stdout = subprocess.PIPE,
+        stderr = subprocess.PIPE
+    )
+    # read the process line by line
+    while True:
+      line = pprocess.stdout.readline()
+      ptext += line;
+      if line != '' and (re.search('(\* ){3,}', line) is None):
+          if proc == "traceroute":
+              parse_trace(line) #print line.rstrip()
+          else: # ping type?
+              print line.rstrip()
+      else:
+          break
+    return ptext
 
-pingtext = ""
-pingprocess = subprocess.Popen(
-    ["ping", "-c", str(pnum), host],
-    stdout = subprocess.PIPE,
-    stderr = subprocess.PIPE
-)
+# standardized GET request
+def GET_REQUEST(address):
+    timeout = 60
+    socket.setdefaulttimeout(timeout)
 
-# read the process line by line
-while True:
-  line = pingprocess.stdout.readline()
-  pingtext += line;
-  if line != '':
-    #the real code does filtering here
-    print line.rstrip()
-  else:
-    break
+    user_agent = 'Network Graph Research (Linux; Cape Cod, MA)'
+    headers = { 'User-Agent' : user_agent }
 
-# matcher for speeds (min,avg,max,mdev)
-matcher = re.compile("(\d+.\d+)/(\d+.\d+)/(\d+.\d+)/(\d+.\d+)")
-speeds = matcher.search(pingtext)
-ping = {}
-if(speeds):
-    speeds = speeds.groups()
-    # the ping times are for the FULL traceroute
-    ping = {"ip" : host, # TODO ask Todd maybe has ideas?
+    req = urllib2.Request(url = address, headers = headers)
+    response = urllib2.urlopen(req)
+    content = response.read()
+    return content
+
+def parse_ping(pingtext):
+    # matcher for speeds (min,avg,max,mdev)
+    matcher = re.compile("(\d+.\d+)/(\d+.\d+)/(\d+.\d+)/(\d+.\d+)")
+    speeds = matcher.search(pingtext)
+    if(speeds):
+        speeds = speeds.groups()
+        # the ping times are for the FULL traceroute
+        ping = {"ip" : host, # TODO ask Todd maybe has ideas?
+                "host": host,
+                "min" : float(speeds[0]),
+                "avg" : float(speeds[1]),
+                "max" : float(speeds[2]),
+                "sdev" : float(speeds[3])
+                }
+        print ping # verify all the timings are correct for the trace
+    else: # in CASE of ERROR with a PING
+        ping = {"ip" : host, # TODO ask Todd maybe has ideas?
             "host": host,
-            "min" : float(speeds[0]),
-            "avg" : float(speeds[1]),
-            "max" : float(speeds[2]),
-            "sdev" : float(speeds[3])
+            "min" : "",
+            "avg" : "",
+            "max" : "",
+            "sdev" : ""
             }
-    print ping # verify all the timings are correct for the trace
-else: # in CASE of ERROR with a PING
-    ping = {"ip" : host, # TODO ask Todd maybe has ideas?
-        "host": host,
-        "min" : "",
-        "avg" : "",
-        "max" : "",
-        "sdev" : ""
-        }
+    return ping
 
-# traceroute: to collect timing info along this route
-
-# function for calculating standard deviation
-def sdev(data, avg):
-    tdev = 0
-    for dev in data:
-        tdev += abs(dev-avg)
-    return tdev/len(data)
-
-# traceroute is the main variable that stored all the traceroute info
-traceroute = []
-def append_trace(ip, host, times):
-    minimum = min(times)
-    maximum = max(times)
-    average = sum(times)/len(times)
-    variance = sdev(times, average)
-
-    trace = {"ip" : ip[0],
-        "host" : host[0],
-        "times": times,
-        "min" : minimum,
-        "avg" : average,
-        "max" : maximum,
-        "sdev" : variance
-        #"address" : address,
-        #"lat" : lat,
-        #"lng" : lng
-        #"accesspoint" : router_number
-        }
-    traceroute.append(trace)
-    print trace
-
+# format and parse a line from a traceroute
 def parse_trace(line):
     # get all the ip address for the route
     matcher = re.compile("(?<=\()\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?=\) )")
@@ -123,53 +123,41 @@ def parse_trace(line):
     if len(ip) != 0 and len(host) != 0 and len(times) >= 1:
         for i in range(len(times)):
             times[i] = float(times[i]) # convert time to a number
-        append_trace(ip, host, times)
+        append_trace(ip[0], host[0], times)
 
-traceprocess = subprocess.Popen(
-    ["traceroute", "-q", str(tnum), host],
-    stdout = subprocess.PIPE,
-    stderr = subprocess.PIPE
-)
+# calculate standard deviation
+def sdev(data, avg):
+    tdev = 0
+    for dev in data:
+        tdev += abs(dev-avg)
+    return tdev/len(data)
 
-# read the traceroute process line by line
-tracetext = ""
-while True:
-  # TODO if you we see "* * *" quit the loop regex
-  line = traceprocess.stdout.readline()
-  tracetext += line;
-  # if we see 3 or more *'s in a row break
-  if line != '' and (re.search('(\* ){3,}', line) is None):
-    #the real code does filtering here
-    parse_trace(line)
-    #print line.rstrip() # remove return at end of line
-  else:
-    break
+# add ip, host, times to traceroute
+def append_trace(ip, host, times):
+    minimum = min(times)
+    maximum = max(times)
+    average = sum(times)/len(times)
+    variance = sdev(times, average)
 
-def GET_REQUEST(address):
-
-    timeout = 60
-    socket.setdefaulttimeout(timeout)
-
-    user_agent = 'Network Graph Research (Linux; Cape Cod, MA)'
-    headers = { 'User-Agent' : user_agent }
-
-    req = urllib2.Request(url = address, headers = headers)
-    response = urllib2.urlopen(req)
-    content = response.read()
-    return content
+    trace = {"ip" : ip,
+        "host" : host,
+        "times": times,
+        "min" : minimum,
+        "avg" : average,
+        "max" : maximum,
+        "sdev" : variance
+        #"address" : address,
+        #"lat" : lat,
+        #"lng" : lng
+        #"accesspoint" : router_number
+        }
+    traceroute.append(trace)
+    print trace
 
 # Get the IP ADDRESS Geo Location lat/lng
 # https://geoiptool.com/en/?ip=128.128.76.17
-locations = []
-
-traceroute.pop(0) #the first address is localhost and it needs to be removed
-
-# blacklist = {"lng": "lat"}
-# wichita maybe okay: "-97.2251" : "37.7083"
-blacklist = {"-6.2597" : "53.3478", "-97.0" : "38.0", "-97.2251" : "37.7083"}
-
-for index in range(len(traceroute)):
-    geohtml = GET_REQUEST("https://www.geoiptool.com/en/?ip=" + traceroute[index]["ip"])
+def ip_geocode(ip_address):
+    geohtml = GET_REQUEST("https://www.geoiptool.com/en/?ip=" + ip_address)
     matcher = re.compile("{lat: .*}")
     geo = matcher.search(geohtml).group()
     geo = geo.replace("lat","\"lat\"")
@@ -177,27 +165,80 @@ for index in range(len(traceroute)):
     geo = json.loads(geo) # if you need the json data type
     lat = geo["lat"] #"41.618116"
     lng = geo["lng"] #"-70.485361"
-    if str(lng) not in blacklist:
-        traceroute[index]["lat"] = lat
-        traceroute[index]["lng"] = lng
-    else: # blacklist / bogus location
-        traceroute[index]["lat"] = ""
-        traceroute[index]["lng"] = ""
-    print traceroute[index]
+    return [lat,lng]
 
-# Area Lookup for lat/lng of IP ADDRESS
-# http://nominatim.openstreetmap.org/search?q=us+41.618116,-70.485361&format=json&addressdetails=1
-for index in range(len(traceroute)):
-    openmap = GET_REQUEST("http://nominatim.openstreetmap.org/search?q=us+"+ str(traceroute[index]["lat"]) +","+ str(traceroute[index]["lng"]) + "&format=json&addressdetails=1")
-    address = json.loads(openmap)
-    traceroute[index]["address"] = address[0]["display_name"]
-    if traceroute[index]["address"] != "United States of America":
-        traceroute[index]["importance"] = address[0]["importance"]
-    else: # TODO: unknown town
-        traceroute[index]["importance"] = ""
-    print traceroute[index]
+def geocode_traceroute(traceroute):
+    # blacklist = {"lng": "lat"}
+    # wichita maybe okay: "-97.2251" : "37.7083"
+    blacklist = {"-6.2597" : "53.3478", "-97.0" : "38.0", "-97.2251" : "37.7083"}
+    for index in range(len(traceroute)):
+        latlng = ip_geocode(traceroute[index]["ip"])
+        lat = latlng[0]
+        lng = latlng[1]
+        if str(lng) not in blacklist:
+            traceroute[index]["lat"] = lat
+            traceroute[index]["lng"] = lng
+        else: # blacklist / bogus location
+            traceroute[index]["lat"] = ""
+            traceroute[index]["lng"] = ""
+        print traceroute[index]
 
-print traceroute
+# IP ADDRESS to lat/lng
+# OpenStreetMap:  http://nominatim.openstreetmap.org/search?q=us+41.618116,-70.485361&format=json&addressdetails=1
+# Google:  https://maps.googleapis.com/maps/api/geocode/json?latlng=41.618116,-70.485361&sensor=false&key=AIzaSyCLXuFbu3C5ekOorvP9mib_NX4g4gsh-8I
+# IF NEEDED: address lookup http://pelias.mapzen.com/reverse?lat=41.6178&lon=-70.5147
+# NOT ACCURATE ENOUGH YET (TODO) so we also use google geo location
+
+def google_geocode(latlng):
+    lat = latlng[0] # lat,lng not always in this order!
+    lng = latlng[1]
+    if(lat != "" and lng != ""):
+        googlegeo = GET_REQUEST("https://maps.googleapis.com/maps/api/geocode/json?latlng="+str(lng)+","+ str(lat)+"&sensor=false&key=AIzaSyCLXuFbu3C5ekOorvP9mib_NX4g4gsh-8I")
+        return json.loads(googlegeo)
+    else:
+        return None
+
+def open_geocode(latlng):
+    lat = latlng[0] # lat,lng not always in this order!
+    lng = latlng[1]
+    if(lat != "" and lng != ""):
+        opengeo = GET_REQUEST("http://nominatim.openstreetmap.org/search?q=us+"+ str(lat) +","+ str(lng) + "&format=json&addressdetails=1")
+        return json.loads(opengeo)
+    else: 
+        return None
+
+def append_address_trace(address, index, type):
+    if(address == None):
+        traceroute[index]["address"] = ""
+        return
+    if(type == "open"): # address[0]["display_name"]
+        traceroute[index]["address"] = address[0]["display_name"]
+        if traceroute[index]["address"] != "United States of America":
+            traceroute[index]["importance"] = address[0]["importance"]
+        else: # TODO: unknown town
+            traceroute[index]["importance"] = ""
+        return
+    if(type == "google" and (address["status"] == "OK")):
+        if(len(address["results"]) > 1):
+            traceroute[index]["address"] = address["results"][1]["formatted_address"]
+        else:
+            traceroute[index]["address"] = ""
+        return
+        
+def address_traceroute(traceroute):
+    for index in range(len(traceroute)):
+        lng = traceroute[index]["lng"]
+        lat = traceroute[index]["lat"]
+        if(try_google):
+            gaddress = google_geocode([lat,lng])
+            append_address_trace(gaddress, index, "google")
+        if(try_openstreetmap):
+            oaddress = open_geocode([lat,lng])
+            append_address_trace(oaddress, index, "open")
+        print traceroute[index]
+
+# start the program with
+main()
 
 """
 # FINAL DATA EXAMPLE:
@@ -205,10 +246,7 @@ print traceroute
 """
 
 """
-# IF NEEDED: address lookup http://pelias.mapzen.com/reverse?lat=41.6178&lon=-70.5147
-
-# Do a Wikipedia Lookup Based on geolocation (Cape Cod, MA)
-# http://api.geonames.org/findNearbyWikipedia?lat=41.618116&lng=-70.485361&username=demo
+# Do a Wikipedia Lookup Based on geolocation (Cape Cod, MA) http://api.geonames.org/findNearbyWikipedia?lat=41.618116&lng=-70.485361&username=demo
 wikihtml = GET_REQUEST("http://api.geonames.org/findNearbyWikipedia?lat="+ str(lat) +"&lng="+ str(lng) + "&username=asolr")
 wiki = ET.fromstring(wikihtml) # if you need the xml data type
 print ET.tostring(wiki)
