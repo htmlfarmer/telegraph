@@ -47,7 +47,6 @@ def main ():
     address_traceroute(traceroute)
     print traceroute
 
-
 def pyprocess(proc, flag, num, iphost):
     total_failed = 2
     failed = 0
