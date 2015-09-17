@@ -17,6 +17,7 @@ About: This program searches Vacinity Information based on IP Address
         # http://wiki.openstreetmap.org/wiki/Nominatim
         # http://www.geonames.org/export/ws-overview.html
         NOTE: Free 135 MB GeoIP Database http://dev.maxmind.com/geoip/geoip2/geolite2/
+        ACTIVATE GOOGLE API KEY: https://console.developers.google.com/project
 """
 
 # hostname to check if any (command line hostname priority)
@@ -138,13 +139,21 @@ def append_trace(ip, host, times):
     maximum = max(times)
     average = sum(times)/len(times)
     variance = sdev(times, average)
+    distance = average*5000
+
+    minimum = round(minimum, 2)
+    maximum = round(maximum, 2)
+    average = round(average, 2)
+    variance = round(variance, 2)
+    distance = round(distance, 2)
 
     trace = {"ip" : ip,
-        "host" : host,
-        "times": times,
-        "min" : minimum,
+       # "host" : host,
+       # "times": times,
+       # "min" : minimum,
         "avg" : average,
-        "max" : maximum,
+        "dist" : distance,
+       # "max" : maximum,
         "sdev" : variance
         #"address" : address,
         #"lat" : lat,
@@ -204,7 +213,7 @@ def open_geocode(latlng):
     if(lat != "" and lng != ""):
         opengeo = GET_REQUEST("http://nominatim.openstreetmap.org/search?q=us+"+ str(lat) +","+ str(lng) + "&format=json&addressdetails=1")
         return json.loads(opengeo)
-    else: 
+    else:
         return None
 
 def append_address_trace(address, index, type):
@@ -224,7 +233,7 @@ def append_address_trace(address, index, type):
         else:
             traceroute[index]["address"] = ""
         return
-        
+
 def address_traceroute(traceroute):
     for index in range(len(traceroute)):
         lng = traceroute[index]["lng"]
