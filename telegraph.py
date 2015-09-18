@@ -38,7 +38,7 @@ ping = {}
 if(len(sys.argv) > 1):
     host = sys.argv[1]
 else:
-    host = "www.whoi.edu" #"boston.com" #"www.google.com" #"facebook.com" #"mit.edu" #"harvard.edu" #"wit.edu"
+    host = "www.whoi.edu" #"boston.com" #"www.google.com" #"facebook.com" #"mit.edu" #"harvard.edu" #"wit.edu" #"capecod.edu"
 
 def main ():
     # ping = parse_ping(pyprocess("ping", "-c", str(pnum), host))
@@ -48,8 +48,9 @@ def main ():
     address_traceroute(traceroute)
     print traceroute
 
-
 def pyprocess(proc, flag, num, iphost):
+    total_failed = 2
+    failed = 0
     ptext = ""
     pprocess = subprocess.Popen(
         [proc, flag, num, iphost],
@@ -60,7 +61,9 @@ def pyprocess(proc, flag, num, iphost):
     while True:
       line = pprocess.stdout.readline()
       ptext += line;
-      if line != '' and (re.search('(\* ){3,}', line) is None):
+      if re.search('(\* ){3,}', line):
+          failed += 1
+      if line != '' and failed <= total_failed:
           if proc == "traceroute":
               parse_trace(line) #print line.rstrip()
           else: # ping type?
@@ -125,6 +128,8 @@ def parse_trace(line):
         for i in range(len(times)):
             times[i] = float(times[i]) # convert time to a number
         append_trace(ip[0], host[0], times)
+    else:
+        print line # print the bad traceroute case to the screen
 
 # calculate standard deviation
 def sdev(data, avg):
@@ -245,6 +250,8 @@ def address_traceroute(traceroute):
             oaddress = open_geocode([lat,lng])
             append_address_trace(oaddress, index, "open")
         print traceroute[index]
+
+# add time stamp
 
 # start the program with
 main()
