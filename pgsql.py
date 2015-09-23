@@ -28,12 +28,11 @@ def CREATE_TABLE(table, text):
 
 def INSERT(table, url, text):
     date = datetime.date.today()
-    query = "INSERT INTO %s (url, text, date) " \
-        "VALUES ('%s', '%s', '%s')" %(table, url, text, date)
-    sql.execute(query)
+    sql.execute("""INSERT INTO main (url, text, date) \
+        VALUES (%s, %s, %s);""", (url, text, date))
 
 def SELECT(table, url):
-    sql.execute("SELECT * FROM %s WHERE url = '%s'" %(table, url))
+    sql.execute("""SELECT * FROM %s WHERE url = %s""", (table, url))
 
 def QUERY(text):
     sql.execute(text)

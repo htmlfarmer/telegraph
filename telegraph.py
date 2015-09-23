@@ -64,6 +64,7 @@ def pyprocess(proc, flag, num, iphost):
       if re.search('(\* ){3,}', line):
           failed += 1
       if line != '' and failed <= total_failed:
+          failed = 0 
           if proc == "traceroute":
               parse_trace(line) #print line.rstrip()
           else: # ping type?
