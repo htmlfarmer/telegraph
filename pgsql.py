@@ -27,9 +27,11 @@ def CREATE_TABLE(table, text):
     sql.execute("CREATE TABLE " + table + " (" + text + ");")
 
 def INSERT(table, url, text):
-    date = datetime.date.today()
-    sql.execute("""INSERT INTO main (url, text, date) \
-        VALUES (%s, %s, %s);""", (url, text, date))
+    #date = datetime.date.today()
+    date = time.time().strftime('%Y-%m-%d %H:%M:%S')
+    print date
+    sql.execute("""INSERT INTO %s (url, text, date) \
+        VALUES (%s, %s, %s);""", (table, url, text, date))
 
 def SELECT(table, url):
     sql.execute("""SELECT * FROM %s WHERE url = %s""", (table, url))
