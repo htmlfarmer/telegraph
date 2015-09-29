@@ -1,3 +1,4 @@
+import time
 import datetime
 import psycopg2
 
@@ -30,12 +31,13 @@ def INSERT(table, url, text):
     #date = datetime.date.today()
     date = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     print date
-    query = "INSERT INTO %s (url, text, date) VALUES (%s, %s, %s);"
-    params = (table, url, text, date,)
+    query = "INSERT INTO " + table + " (url, text, date) VALUES (%s, %s, %s);"
+    params = (url, text, date,)
     sql.execute(query, params)
 
 def SELECT(table, url):
-    sql.execute("""SELECT * FROM %s WHERE url = %s""", (table, url))
+    query = "SELECT * FROM " + table + " WHERE url = %s;"
+    sql.execute(query, (url,))
 
 def QUERY(text):
     sql.execute(text)

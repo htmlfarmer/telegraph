@@ -2,10 +2,10 @@
 <head><title>Cape Cod Trace Route Project</title></head>
 <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
 <script src="telegraph.js"></script>
-<script src="pyhttp.js"></script>
+<script src="request.js"></script>
 <body>
 <script type="text/javascript">
-  window.addEventListener('load', function() {pyhttp("date.py", update);}, false);
+  window.addEventListener('load', function() {GET("date.py", update);}, false);
   function update(info) {
     alert(info.response);
   }

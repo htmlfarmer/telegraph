@@ -1,4 +1,3 @@
-// SQLHttpRequest Post Request
 function GET(file, callback) {
   var http = new XMLHttpRequest();
   http.onload = callback;
