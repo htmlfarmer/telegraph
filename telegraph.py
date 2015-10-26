@@ -38,7 +38,7 @@ ping = {}
 if(len(sys.argv) > 1):
     host = sys.argv[1]
 else:
-    host = "www.whoi.edu" #"boston.com" #"www.google.com" #"facebook.com" #"mit.edu" #"harvard.edu" #"wit.edu" #"capecod.edu"
+    host = "capecodonline.com" #"www.whoi.edu" #"boston.com" #"www.google.com" #"facebook.com" #"mit.edu" #"harvard.edu" #"wit.edu" #"capecod.edu"
 
 def main ():
     # ping = parse_ping(pyprocess("ping", "-c", str(pnum), host))
@@ -180,7 +180,7 @@ def ip_geocode(ip_address):
     latlng = matcher.search(geohtml).group()
     latlng = latlng.replace("lat","\"lat\"")
     latlng = latlng.replace("lng","\"lng\"")
-    latlng = json.loads(latlng) 
+    latlng = json.loads(latlng)
     return latlng
 
 def geocode_traceroute(traceroute):
@@ -207,16 +207,31 @@ def geocode_traceroute(traceroute):
 # NOT ACCURATE ENOUGH YET (TODO) so we also use google geo location
 
 def google_geocode(latlng):
-    lat = latlng["lat"] 
+    lat = latlng["lat"]
     lng = latlng["lng"]
     if(lat != "" and lng != ""):
-        googlegeo = GET_REQUEST("https://maps.googleapis.com/maps/api/geocode/json?latlng="+str(lng)+","+ str(lat)+"&sensor=false&key=AIzaSyCLXuFbu3C5ekOorvP9mib_NX4g4gsh-8I")
-        return json.loads(googlegeo)
+        googlegeo = GET_REQUEST("https://maps.googleapis.com/maps/api/geocode/json?latlng="+str(lat)+","+str(lng)+"&sensor=false&key=AIzaSyCLXuFbu3C5ekOorvP9mib_NX4g4gsh-8I")
+        address = json.loads(googlegeo)
+        return google_address_parser(address["results"][0]["address_components"])
     else:
         return ""
 
+def google_address_parser(address):
+    city = ""
+    state = ""
+    zipcode = ""
+    for component in address:
+        for tp in component["types"]:
+            if tp == "administrative_area_level_1":
+                state = component["long_name"]
+            if tp == "locality":
+                city = component["long_name"]
+            if tp == "postal_code":
+                zipcode = component["long_name"]
+    return city + " " + state + ", " + zipcode
+
 def open_geocode(latlng):
-    lat = latlng["lat"] 
+    lat = latlng["lat"]
     lng = latlng["lng"]
     if(lat != "" and lng != ""):
         opengeo = GET_REQUEST("http://nominatim.openstreetmap.org/search?q=us+"+ str(lat) +","+ str(lng) + "&format=json&addressdetails=1")
