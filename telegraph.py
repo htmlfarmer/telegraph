@@ -62,15 +62,18 @@ def pyprocess(proc, flag, num, iphost):
       line = pprocess.stdout.readline()
       ptext += line;
       if re.search('(\* ){3,}', line):
-          failed += 1
-      if line != '' and failed <= total_failed:
-          failed = 0 
-          if proc == "traceroute":
-              parse_trace(line) #print line.rstrip()
-          else: # ping type?
-              print line.rstrip()
+        failed += 1
+      elif line:
+        failed = 0
+        if proc == "traceroute":
+            parse_trace(line) #print line.rstrip()
+        else: # ping type?
+            print line.rstrip()
       else:
-          break
+        break
+      if failed > total_failed:
+        break
+
     return ptext
 
 # standardized GET request
@@ -174,22 +177,21 @@ def append_trace(ip, host, times):
 def ip_geocode(ip_address):
     geohtml = GET_REQUEST("https://www.geoiptool.com/en/?ip=" + ip_address)
     matcher = re.compile("{lat: .*}")
-    geo = matcher.search(geohtml).group()
-    geo = geo.replace("lat","\"lat\"")
-    geo = geo.replace("lng","\"lng\"")
-    geo = json.loads(geo) # if you need the json data type
-    lat = geo["lat"] #"41.618116"
-    lng = geo["lng"] #"-70.485361"
-    return [lat,lng]
+    latlng = matcher.search(geohtml).group()
+    latlng = latlng.replace("lat","\"lat\"")
+    latlng = latlng.replace("lng","\"lng\"")
+    latlng = json.loads(latlng) 
+    return latlng
 
 def geocode_traceroute(traceroute):
     # blacklist = {"lng": "lat"}
     # wichita maybe okay: "-97.2251" : "37.7083"
-    blacklist = {"-6.2597" : "53.3478", "-97.0" : "38.0", "-97.2251" : "37.7083"}
+    # "-0.071389" : "-75.250973" = Antarctica
+    blacklist = {"-6.2597" : "53.3478", "-97.0" : "38.0", "-97.2251" : "37.7083", "-0.071389" : "-75.250973"}
     for index in range(len(traceroute)):
         latlng = ip_geocode(traceroute[index]["ip"])
-        lat = latlng[0]
-        lng = latlng[1]
+        lat = latlng["lat"]
+        lng = latlng["lng"]
         if str(lng) not in blacklist:
             traceroute[index]["lat"] = lat
             traceroute[index]["lng"] = lng
@@ -205,62 +207,38 @@ def geocode_traceroute(traceroute):
 # NOT ACCURATE ENOUGH YET (TODO) so we also use google geo location
 
 def google_geocode(latlng):
-    lat = latlng[0] # lat,lng not always in this order!
-    lng = latlng[1]
+    lat = latlng["lat"] 
+    lng = latlng["lng"]
     if(lat != "" and lng != ""):
         googlegeo = GET_REQUEST("https://maps.googleapis.com/maps/api/geocode/json?latlng="+str(lng)+","+ str(lat)+"&sensor=false&key=AIzaSyCLXuFbu3C5ekOorvP9mib_NX4g4gsh-8I")
         return json.loads(googlegeo)
     else:
-        return None
+        return ""
 
 def open_geocode(latlng):
-    lat = latlng[0] # lat,lng not always in this order!
-    lng = latlng[1]
+    lat = latlng["lat"] 
+    lng = latlng["lng"]
     if(lat != "" and lng != ""):
         opengeo = GET_REQUEST("http://nominatim.openstreetmap.org/search?q=us+"+ str(lat) +","+ str(lng) + "&format=json&addressdetails=1")
         return json.loads(opengeo)
     else:
-        return None
-
-def append_address_trace(address, index, type):
-    if(address == None):
-        traceroute[index]["address"] = ""
-        return
-    if(type == "open"): # address[0]["display_name"]
-        traceroute[index]["address"] = address[0]["display_name"]
-        if traceroute[index]["address"] != "United States of America":
-            traceroute[index]["importance"] = address[0]["importance"]
-        else: # TODO: unknown town
-            traceroute[index]["importance"] = ""
-        return
-    if(type == "google" and (address["status"] == "OK")):
-        if(len(address["results"]) > 1):
-            traceroute[index]["address"] = address["results"][1]["formatted_address"]
-        else:
-            traceroute[index]["address"] = ""
-        return
+        return ""
 
 def address_traceroute(traceroute):
     for index in range(len(traceroute)):
-        lng = traceroute[index]["lng"]
-        lat = traceroute[index]["lat"]
+        latlng = {"lng" : traceroute[index]["lng"], "lat" : traceroute[index]["lat"]}
         if(try_google):
-            gaddress = google_geocode([lat,lng])
-            append_address_trace(gaddress, index, "google")
+            gaddress = google_geocode(latlng)
+            traceroute[index]["address"] = gaddress
         if(try_openstreetmap):
-            oaddress = open_geocode([lat,lng])
-            append_address_trace(oaddress, index, "open")
+            oaddress = open_geocode(latlng)
+            traceroute[index]["address"] = oaddress
         print traceroute[index]
 
 # add time stamp
 
 # start the program with
 main()
-
-"""
-# FINAL DATA EXAMPLE:
-[{'sdev': 1.9021599999999999, 'min': 8.61, 'importance': 0.325, 'ip': ['96.120.65.101'], 'address': u'Mashpee, Barnstable County, Massachusetts, 02649, United States of America', 'times': [8.61, 9.332, 9.738, 13.184, 13.195], 'host': ['96.120.65.101'], 'max': 13.195, 'lat': 41.6162, 'lng': -70.4931, 'avg': 10.8118}, {'sdev': 0.3321599999999997, 'min': 13.0, 'importance': 0.325, 'ip': ['68.87.154.77'], 'address': u'Mashpee, Barnstable County, Massachusetts, 02649, United States of America', 'times': [14.038, 13.0, 13.0, 13.0, 13.0], 'host': ['te-9-5-ur02.mashpee.ma.boston.comcast.net'], 'max': 14.038, 'lat': 41.6162, 'lng': -70.4931, 'avg': 13.2076}, {'sdev': 1.7760800000000014, 'min': 13.302, 'importance': 0.325, 'ip': ['68.85.37.93'], 'address': u'Mashpee, Barnstable County, Massachusetts, 02649, United States of America', 'times': [19.768, 15.097, 15.059, 13.413, 13.302], 'host': ['be-113-ar01.needham.ma.boston.comcast.net'], 'max': 19.768, 'lat': 41.6162, 'lng': -70.4931, 'avg': 15.327800000000002}, {'sdev': 0.13567999999999927, 'min': 24.019, 'importance': 0.325, 'ip': ['68.86.90.217'], 'address': u'Mashpee, Barnstable County, Massachusetts, 02649, United States of America', 'times': [24.019, 24.214, 24.455, 24.155, 24.369], 'host': ['be-7015-cr01.newyork.ny.ibone.comcast.net'], 'max': 24.455, 'lat': 41.6162, 'lng': -70.4931, 'avg': 24.242399999999996}, {'sdev': 0.20208000000000012, 'min': 28.687, 'importance': 0.325, 'ip': ['68.86.85.25'], 'address': u'Mashpee, Barnstable County, Massachusetts, 02649, United States of America', 'times': [28.866, 29.203, 29.153, 28.718, 28.687], 'host': ['be-10102-cr02.ashburn.va.ibone.comcast.net'], 'max': 29.203, 'lat': 41.6162, 'lng': -70.4931, 'avg': 28.925400000000003}, {'sdev': 2.1282400000000004, 'min': 21.644, 'importance': 0.325, 'ip': ['68.86.85.70'], 'address': u'Mashpee, Barnstable County, Massachusetts, 02649, United States of America', 'times': [26.493, 28.149, 28.519, 28.839, 21.644], 'host': ['he-0-14-0-0-pe07.ashburn.va.ibone.comcast.net'], 'max': 28.839, 'lat': 41.6162, 'lng': -70.4931, 'avg': 26.7288}]
-"""
 
 """
 # Do a Wikipedia Lookup Based on geolocation (Cape Cod, MA) http://api.geonames.org/findNearbyWikipedia?lat=41.618116&lng=-70.485361&username=demo
