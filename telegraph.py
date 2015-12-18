@@ -7,17 +7,16 @@ import re
 import json
 import xml.etree.ElementTree as ET
 
+# TODO: traceroute6 and ping6
+
 """
 About: This program searches Vacinity Information based on IP Address
-        geo = a JSON object with lat/lng
-        address = Street Address Information for the IP Address
-        wiki = a XML object with localized wikipedia info based on lat/lng
         # http://www.census.gov/geo/maps-data/data/tiger.html
         # https://geoiptool.com/en/?ip=128.128.76.17
         # http://wiki.openstreetmap.org/wiki/Nominatim
         # http://www.geonames.org/export/ws-overview.html
         NOTE: Free 135 MB GeoIP Database http://dev.maxmind.com/geoip/geoip2/geolite2/
-        ACTIVATE GOOGLE API KEY: https://console.developers.google.com/project
+        ACTIVATE GOOGLE MAPS API KEY: https://console.developers.google.com/project
 """
 
 # hostname to check if any (command line hostname priority)
@@ -27,8 +26,8 @@ host = ""
 pnum = 5 # number of pings to hostname/ip
 tnum = 5 # number of pings per traceroute
 
-try_openstreetmap=False
-try_google=True
+try_openstreetmap=True
+try_google=False
 
 # store all the traceroute  and ping info
 traceroute = []
@@ -223,10 +222,10 @@ def google_address_parser(address):
     for component in address:
         for tp in component["types"]:
             if tp == "administrative_area_level_1":
-                state = component["long_name"]
-            if tp == "locality":
+                state = component["long_name"] # "short_name" gives the abriviation
+            elif tp == "locality":
                 city = component["long_name"]
-            if tp == "postal_code":
+            elif tp == "postal_code":
                 zipcode = component["long_name"]
     return city + " " + state + ", " + zipcode
 
@@ -238,6 +237,17 @@ def open_geocode(latlng):
         return json.loads(opengeo)
     else:
         return ""
+
+def nominatim_address_parser(area):
+    city = ""
+    state = ""
+    zipcode = ""
+    for location in area: #TODO loops too many times
+        for address in location["address"]:
+            state = address["state"]
+            city = address["town"]
+            zipcode = address["postcode"]
+    return city + " " + state + ", " + zipcode
 
 def address_traceroute(traceroute):
     for index in range(len(traceroute)):
