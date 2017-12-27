@@ -6,7 +6,7 @@ import json
 import sys
 import xml.etree.ElementTree as ET
 
-# About: Get Remote Content 
+# About: Get Remote Content
 # TODO: requires host to be http://
 
 host = "" # for static host
@@ -16,8 +16,8 @@ if(len(sys.argv) > 1):
     host = sys.argv[1]
     if(len(sys.argv) > 2):
         regex = sys.argv[2]
-else:
-    host= "ubuntu.com" #"www.google.com" #"73.186.246.38" #128.128.76.17 #WHOI.edu             
+else: # requires "http://" before
+    host= "http://ubuntu.com" #"www.google.com" #"73.186.246.38" #128.128.76.17 #WHOI.edu
 
 def GET_REQUEST(address):
 
@@ -41,4 +41,3 @@ if(regex):
     print match
 else:
     print html
-

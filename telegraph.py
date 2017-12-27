@@ -7,6 +7,9 @@ import re
 import json
 import xml.etree.ElementTree as ET
 
+## WORKING WITH PYTHON ON LINUX
+# http://kodi.wiki/view/HOW-TO:Debug_Python_Scripts_with_Eclipse
+
 # TODO: traceroute6 and ping6
 
 """
@@ -79,7 +82,7 @@ def pyprocess(proc, flag, num, iphost):
 def GET_REQUEST(address):
     timeout = 60
     socket.setdefaulttimeout(timeout)
-
+    print "address to read is " + address
     user_agent = 'Network Graph Research (Linux; Cape Cod, MA)'
     headers = { 'User-Agent' : user_agent }
 
